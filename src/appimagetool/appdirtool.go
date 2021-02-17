@@ -1372,20 +1372,24 @@ func getQtPrfxpath(f *os.File, err error, qtVersion int) string {
 		os.Exit(1)
 	}
 	qt_prfxpath := strings.TrimSpace(string(buf))
-	// if the path doesnt exist, get it from QT_INSTALL_PREFIX
+
+	// if the path doesn't exist, get it from QT_PRFXPATH environment variable
+	// if it exists, otherwise from QT_INSTALL_PREFIX
 	if helpers.IsDirectory(qt_prfxpath) == false {
-		fmt.Println("qt_prfxpath is set to: ",qt_prfxpath," which is invalid.")
-		if cmd, e := exec.Run("qmake -query 'QT_INSTALL_PREFIX'", nil, nil, exec.DevNull, exec.Pipe, exec.MergeWithStdout); e == nil {
-			b, _ := ioutil.ReadAll(cmd.Stdout)
-			qt_prfxpath := string(b)
-			println("qt_prfxpath has been set to :" + qt_prfxpath)
-		} else {
-			fmt.Println("please enter a valid full path:")
-			fmt.Scanln(&qt_prfxpath)
+		log.Println("qt_prfxpath is currently ",qt_prfxpath," which is invalid.")
+		qt_prfxpath = strings.TrimSpace(os.Getenv("QT_PRFXPATH"))
+		if ( qt_prfxpath == "" || helpers.IsDirectory(qt_prfxpath) == false ) {
+			out, err := exec.Command("qmake","-query","'QT_INSTALL_PREFIX'").Output()
+			if err != nil {
+				helpers.PrintError("Unable to read qt_prfxpath from qmake var 'QT_INSTALL_PREFIX'",err)
+				os.Exit(1)
+			}
+			qt_prfxpath = strings.TrimSpace(string(out))
 		}
+		log.Println("qt_prfxpath has been set to:" + qt_prfxpath)
 	}
 	log.Println("qt_prfxpath:", qt_prfxpath)
-	if qt_prfxpath == "" {
+	if ( qt_prfxpath == "" || helpers.IsDirectory(qt_prfxpath) == false ) {
 		log.Println("Could not get qt_prfxpath")
 		return ""
 	}
